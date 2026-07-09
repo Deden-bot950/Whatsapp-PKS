@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>PKS Bandung Kulon — Chat</title>
+<link rel="icon" href="/assets/pks-logo.png" />
+<style>
+  :root {
+    --orange: #F26522;
+    --orange-dark: #D6551A;
+    --ink: #191A1A;
+    --paper: #FFF9F4;
+    --card: #FFFFFF;
+    --line: #EFE2D6;
+    --muted: #8A7B6E;
+    --bubble-out: #FDE6D6;
+    --bubble-in: #FFFFFF;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    margin: 0; padding: 0; height: 100%;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--paper);
+    color: var(--ink);
+    overscroll-behavior-y: contain;
+  }
+  #app { height: 100%; display: flex; flex-direction: column; max-width: 480px; margin: 0 auto; background: var(--paper); position: relative; overflow: hidden; }
+
+  /* ---------- Top brand bar ---------- */
+  .brandbar {
+    display: flex; align-items: center; gap: 10px;
+    padding: 14px 16px; background: var(--orange); color: #fff;
+    flex-shrink: 0;
+  }
+  .brandbar img { width: 32px; height: 32px; border-radius: 50%; background: #fff; padding: 2px; }
+  .brandbar .titles { line-height: 1.15; }
+  .brandbar .titles .t1 { font-weight: 700; font-size: 15px; }
+  .brandbar .titles .t2 { font-size: 11.5px; opacity: 0.9; }
+  .brandbar .spacer { flex: 1; }
+  .brandbar button.icon {
+    background: rgba(255,255,255,0.18); border: none; color: #fff;
+    width: 34px; height: 34px; border-radius: 50%; font-size: 16px; cursor: pointer;
+  }
+
+  /* ---------- Screens ---------- */
+  .screen { flex: 1; display: none; flex-direction: column; overflow: hidden; }
+  .screen.active { display: flex; }
+
+  /* ---------- Auth ---------- */
+  #authScreen { justify-content: center; align-items: center; padding: 32px 28px; text-align: center; }
+  #authScreen img.logo { width: 84px; height: 84px; margin-bottom: 6px; }
+  #authScreen h1 { font-size: 20px; margin: 4px 0 2px; }
+  #authScreen p.sub { color: var(--muted); font-size: 13px; margin: 0 0 22px; }
+  .field { width: 100%; margin-bottom: 12px; text-align: left; }
+  .field label { font-size: 12.5px; color: var(--muted); display: block; margin-bottom: 4px; }
+  .field input {
+    width: 100%; padding: 12px 14px; border-radius: 12px; border: 1.5px solid var(--line);
+    font-size: 15px; background: var(--card); color: var(--ink);
+  }
+  .field input:focus { outline: none; border-color: var(--orange); }
+  .btn-primary {
+    width: 100%; padding: 13px; border-radius: 12px; border: none;
+    background: var(--orange); color: #fff; font-size: 15px; font-weight: 600;
+    cursor: pointer; margin-top: 4px;
+  }
+  .btn-primary:active { background: var(--orange-dark); }
+  .btn-link { background: none; border: none; color: var(--orange); font-size: 13.5px; margin-top: 16px; cursor: pointer; }
+  .auth-error { color: #C0392B; font-size: 13px; margin-top: 10px; min-height: 16px; }
+  .id-badge {
+    display: inline-block; background: #FDE6D6; color: var(--orange-dark);
+    font-weight: 700; padding: 10px 18px; border-radius: 12px; font-size: 22px;
+    letter-spacing: 1px; margin: 10px 0 18px;
+  }
+
+  /* ---------- Chat list ---------- */
+  #announceStrip {
+    background: #FFF1E4; border-bottom: 1px solid var(--line);
+    padding: 10px 16px; font-size: 12.5px; color: var(--orange-dark);
+    display: none;
+  }
+  #announceStrip.show { display: block; }
+  #announceStrip b { display: block; font-size: 11px; text-transform: uppercase; letter-spacing: 0.4px; color: var(--muted); margin-bottom: 2px; }
+
+  .tabbar { display: flex; border-bottom: 1px solid var(--line); background: var(--card); flex-shrink: 0; }
+  .tabbar button {
+    flex: 1; padding: 11px; background: none; border: none; font-size: 13.5px; font-weight: 600;
+    color: var(--muted); border-bottom: 2px solid transparent; cursor: pointer;
+  }
+  .tabbar button.active { color: var(--orange); border-color: var(--orange); }
+
+  #chatListWrap { flex: 1; overflow-y: auto; }
+  .chat-row {
+    display: flex; align-items: center; gap: 12px; padding: 12px 16px;
+    border-bottom: 1px solid var(--line); cursor: pointer; background: var(--card);
+  }
+  .chat-row:active { background: #FFF3EA; }
+  .avatar {
+    width: 44px; height: 44px; border-radius: 50%; background: var(--orange);
+    color: #fff; display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 15px; flex-shrink: 0;
+  }
+  .avatar.group { background: var(--ink); }
+  .chat-meta { flex: 1; min-width: 0; }
+  .chat-meta .name { font-weight: 600; font-size: 14.5px; }
+  .chat-meta .preview { font-size: 12.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .empty-state { text-align: center; color: var(--muted); padding: 40px 24px; font-size: 13.5px; }
+
+  .fab {
+    position: absolute; right: 18px; bottom: 22px; width: 52px; height: 52px; border-radius: 50%;
+    background: var(--orange); color: #fff; border: none; font-size: 24px; box-shadow: 0 4px 14px rgba(0,0,0,0.2);
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+  }
+
+  /* ---------- Chat window ---------- */
+  #chatWindowScreen { }
+  .chat-header {
+    display: flex; align-items: center; gap: 10px; padding: 10px 12px;
+    background: var(--card); border-bottom: 1px solid var(--line); flex-shrink: 0;
+  }
+  .chat-header button.back { background: none; border: none; font-size: 20px; color: var(--ink); cursor: pointer; padding: 4px 6px; }
+  .chat-header .name { font-weight: 700; font-size: 15px; }
+  .chat-header .sub { font-size: 11.5px; color: var(--muted); }
+
+  #messagesWrap { flex: 1; overflow-y: auto; padding: 14px 12px; display: flex; flex-direction: column; gap: 8px; }
+  .bubble { max-width: 78%; padding: 9px 12px; border-radius: 14px; font-size: 14px; line-height: 1.4; position: relative; }
+  .bubble.in { background: var(--bubble-in); border: 1px solid var(--line); align-self: flex-start; border-bottom-left-radius: 3px; }
+  .bubble.out { background: var(--bubble-out); align-self: flex-end; border-bottom-right-radius: 3px; }
+  .bubble .sender { font-size: 11px; font-weight: 700; color: var(--orange-dark); margin-bottom: 2px; }
+  .bubble .time { font-size: 10px; color: var(--muted); margin-top: 3px; text-align: right; }
+
+  .composer { display: flex; gap: 8px; padding: 10px; background: var(--card); border-top: 1px solid var(--line); flex-shrink: 0; }
+  .composer input {
+    flex: 1; padding: 11px 14px; border-radius: 20px; border: 1.5px solid var(--line); font-size: 14.5px;
+  }
+  .composer input:focus { outline: none; border-color: var(--orange); }
+  .composer button {
+    width: 42px; height: 42px; border-radius: 50%; background: var(--orange); color: #fff;
+    border: none; font-size: 17px; cursor: pointer; flex-shrink: 0;
+  }
+
+  /* ---------- Modal (new chat / new group / broadcast) ---------- */
+  .modal-overlay {
+    position: absolute; inset: 0; background: rgba(0,0,0,0.4); display: none;
+    align-items: flex-end; z-index: 20;
+  }
+  .modal-overlay.show { display: flex; }
+  .modal-sheet {
+    background: var(--card); width: 100%; border-radius: 18px 18px 0 0; padding: 20px 18px 26px;
+  }
+  .modal-sheet h3 { margin: 0 0 14px; font-size: 16px; }
+  .modal-sheet .close-x { position: absolute; top: 14px; right: 16px; background: none; border: none; font-size: 18px; color: var(--muted); }
+  .group-code-display {
+    background: #FFF1E4; border-radius: 10px; padding: 10px 14px; font-size: 13px; color: var(--orange-dark);
+    margin-top: 8px; display: none;
+  }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ============ AUTH SCREEN ============ -->
+  <div class="screen active" id="authScreen">
+    <img class="logo" src="/assets/pks-logo.png" alt="PKS" />
+    <h1>PKS Bandung Kulon</h1>
+    <p class="sub">Aplikasi chat internet — tanpa nomor HP</p>
+
+    <div id="loginForm" style="width:100%;">
+      <div class="field">
+        <label>Nomor HP</label>
+        <input id="loginId" inputmode="tel" placeholder="Contoh: 08123456789" />
+      </div>
+      <div class="field">
+        <label>Kata Sandi</label>
+        <input id="loginPass" type="password" placeholder="Kata sandi" />
+      </div>
+      <button class="btn-primary" onclick="doLogin()">Masuk</button>
+      <div class="auth-error" id="loginError"></div>
+      <button class="btn-link" onclick="showRegister()">Belum punya akun? Daftar di sini</button>
+    </div>
+
+    <div id="registerForm" style="width:100%; display:none;">
+      <div class="field">
+        <label>Nama</label>
+        <input id="regName" placeholder="Nama kamu" />
+      </div>
+      <div class="field">
+        <label>Nomor HP</label>
+        <input id="regPhone" inputmode="tel" placeholder="Contoh: 08123456789" />
+      </div>
+      <div class="field">
+        <label>Buat Kata Sandi</label>
+        <input id="regPass" type="password" placeholder="Kata sandi" />
+      </div>
+      <button class="btn-primary" onclick="doRegister()">Daftar</button>
+      <div class="auth-error" id="registerError"></div>
+      <button class="btn-link" onclick="showLogin()">Sudah punya akun? Masuk</button>
+    </div>
+
+    <div id="registeredResult" style="width:100%; display:none;">
+      <p class="sub">Akun berhasil dibuat dengan nomor:</p>
+      <div class="id-badge" id="newIdBadge"></div>
+      <p class="sub">Nomor ini dipakai untuk masuk dan dihubungi orang lain.</p>
+      <button class="btn-primary" onclick="showLogin()">Lanjut Masuk</button>
+    </div>
+  </div>
+
+  <!-- ============ CHAT LIST SCREEN ============ -->
+  <div class="screen" id="chatListScreen">
+    <div class="brandbar">
+      <img src="/assets/pks-logo.png" alt="PKS" />
+      <div class="titles">
+        <div class="t1">PKS Bandung Kulon</div>
+        <div class="t2" id="myIdLabel">Nomor: —</div>
+      </div>
+      <div class="spacer"></div>
+      <button class="icon" onclick="logout()" title="Keluar">⏻</button>
+    </div>
+    <div id="announceStrip"><b>Pengumuman</b><span id="announceText"></span></div>
+    <div id="chatListWrap"></div>
+    <button class="fab" onclick="openNewChatModal()">+</button>
+  </div>
+
+  <!-- ============ CHAT WINDOW SCREEN ============ -->
+  <div class="screen" id="chatWindowScreen">
+    <div class="chat-header">
+      <button class="back" onclick="closeChatWindow()">←</button>
+      <div>
+        <div class="name" id="chatWindowName">—</div>
+        <div class="sub" id="chatWindowSub"></div>
+      </div>
+    </div>
+    <div id="messagesWrap"></div>
+    <div id="uploadStatus" style="display:none; padding:6px 14px; font-size:12.5px; color:var(--orange-dark); background:#FFF1E4;"></div>
+    <div class="composer">
+      <button onclick="el('fileInput').click()" style="background:var(--card); color:var(--orange); border:1.5px solid var(--line);">📎</button>
+      <input id="fileInput" type="file" accept="image/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx" style="display:none;" onchange="onFileSelected(event)" />
+      <input id="messageInput" placeholder="Tulis pesan..." onkeydown="if(event.key==='Enter')sendMessageNow()" />
+      <button onclick="sendMessageNow()">➤</button>
+    </div>
+  </div>
+
+  <!-- ============ MODAL: New chat / group / broadcast ============ -->
+  <div class="modal-overlay" id="modalOverlay">
+    <div class="modal-sheet">
+      <button class="close-x" onclick="closeModal()">✕</button>
+
+      <div id="modalTabs" style="display:flex; gap:8px; margin-bottom:14px;">
+        <button onclick="setModalTab('private')" id="tabBtnPrivate" style="flex:1;padding:9px;border-radius:10px;border:1.5px solid var(--line);background:#fff;font-weight:600;font-size:13px;">Chat Pribadi</button>
+        <button onclick="setModalTab('group')" id="tabBtnGroup" style="flex:1;padding:9px;border-radius:10px;border:1.5px solid var(--line);background:#fff;font-weight:600;font-size:13px;">Grup</button>
+        <button onclick="setModalTab('broadcast')" id="tabBtnBroadcast" style="flex:1;padding:9px;border-radius:10px;border:1.5px solid var(--line);background:#fff;font-weight:600;font-size:13px;">Admin</button>
+      </div>
+
+      <div id="modalPrivate">
+        <h3>Mulai chat pribadi</h3>
+        <div class="field"><label>Nomor HP teman</label><input id="targetIdInput" inputmode="tel" placeholder="Contoh: 08129876543" /></div>
+        <button class="btn-primary" onclick="startPrivate()">Mulai Chat</button>
+        <div class="auth-error" id="privateError"></div>
+      </div>
+
+      <div id="modalGroup" style="display:none;">
+        <h3>Buat atau gabung grup</h3>
+        <div class="field"><label>Buat grup baru</label><input id="newGroupName" placeholder="Nama grup" /></div>
+        <button class="btn-primary" onclick="createGroupNow()">Buat Grup</button>
+        <div class="group-code-display" id="groupCodeDisplay"></div>
+        <div style="margin-top:16px; border-top:1px solid var(--line); padding-top:14px;">
+          <div class="field"><label>Gabung grup dengan kode</label><input id="joinGroupCode" placeholder="Contoh: g_0002" /></div>
+          <button class="btn-primary" onclick="joinGroupNow()">Gabung Grup</button>
+        </div>
+        <div class="auth-error" id="groupError"></div>
+      </div>
+
+      <div id="modalBroadcast" style="display:none;">
+        <h3>Kirim pengumuman (admin)</h3>
+        <div class="field"><label>Kata sandi admin</label><input id="adminPass" type="password" placeholder="Kata sandi admin" /></div>
+        <div class="field"><label>Isi pengumuman</label><input id="broadcastText" placeholder="Tulis pengumuman..." /></div>
+        <button class="btn-primary" onclick="sendBroadcast()">Kirim ke Semua Anggota</button>
+        <div class="auth-error" id="broadcastError"></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script>
+// ====== ISI 2 BARIS INI setelah bikin project Supabase (lihat SETUP.md) ======
+const SUPABASE_URL_PUBLIC = "https://uqrhsdbeidnjdqkkiesj.supabase.co";
+const SUPABASE_ANON_KEY_PUBLIC = "sb_publishable_bCGVfStqko202H0TGbH0UA_g4_Gn2gg";
+// ==============================================================================
+const sb = window.supabase.createClient(SUPABASE_URL_PUBLIC, SUPABASE_ANON_KEY_PUBLIC);
+
+const MAX_FILE_MB = 20; // batas ukuran file per kiriman (MB)
+
+const API = "/.netlify/functions/api";
+let session = null; // { id, name }
+let currentConvoId = null;
+let pollTimer = null;
+let listPollTimer = null;
+
+function el(id){ return document.getElementById(id); }
+function showScreen(id){
+  document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
+  el(id).classList.add("active");
+}
+
+async function api(action, payload){
+  const res = await fetch(API, {
+    method: "POST",
+    headers: {"Content-Type":"application/json"},
+    body: JSON.stringify({ action, ...payload })
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || "Terjadi kesalahan");
+  return data;
+}
+
+// ---------- Auth screen switching ----------
+function showRegister(){
+  el("loginForm").style.display = "none";
+  el("registeredResult").style.display = "none";
+  el("registerForm").style.display = "block";
+}
+function showLogin(){
+  el("registerForm").style.display = "none";
+  el("registeredResult").style.display = "none";
+  el("loginForm").style.display = "block";
+}
+
+async function doRegister(){
+  const name = el("regName").value.trim();
+  const phone = el("regPhone").value.trim();
+  const password = el("regPass").value;
+  el("registerError").textContent = "";
+  if (!name || !phone || !password) { el("registerError").textContent = "Lengkapi nama, nomor HP, dan kata sandi"; return; }
+  try {
+    const r = await api("register", { name, phone, password });
+    el("newIdBadge").textContent = r.id;
+    el("registerForm").style.display = "none";
+    el("registeredResult").style.display = "block";
+    el("loginId").value = r.id;
+  } catch(e) { el("registerError").textContent = e.message; }
+}
+
+async function doLogin(){
+  const id = el("loginId").value.trim();
+  const password = el("loginPass").value;
+  el("loginError").textContent = "";
+  if (!id || !password) { el("loginError").textContent = "Isi nomor HP dan kata sandi"; return; }
+  try {
+    const r = await api("login", { id, password });
+    session = { id: r.id, name: r.name };
+    enterApp();
+  } catch(e) { el("loginError").textContent = e.message; }
+}
+
+function logout(){
+  session = null;
+  clearInterval(pollTimer); clearInterval(listPollTimer);
+  showScreen("authScreen");
+  showLogin();
+}
+
+function enterApp(){
+  el("myIdLabel").textContent = "Nomor: " + session.id + " · " + session.name;
+  showScreen("chatListScreen");
+  loadConversations();
+  clearInterval(listPollTimer);
+  listPollTimer = setInterval(loadConversations, 4000);
+}
+
+// ---------- Chat list ----------
+async function loadConversations(){
+  try {
+    const r = await api("getConversations", { id: session.id });
+    renderChatList(r.conversations);
+    renderAnnouncements(r.announcements);
+  } catch(e) { console.error(e); }
+}
+
+function renderAnnouncements(list){
+  const strip = el("announceStrip");
+  if (!list || list.length === 0) { strip.classList.remove("show"); return; }
+  const last = list[list.length-1];
+  el("announceText").textContent = last.text;
+  strip.classList.add("show");
+}
+
+function renderChatList(list){
+  const wrap = el("chatListWrap");
+  if (!list || list.length === 0) {
+    wrap.innerHTML = '<div class="empty-state">Belum ada percakapan.<br>Tekan tombol + untuk mulai chat.</div>';
+    return;
+  }
+  wrap.innerHTML = list.map(c => {
+    const initial = (c.title || "?").charAt(0).toUpperCase();
+    const avatarClass = c.type === "group" ? "avatar group" : "avatar";
+    return `<div class="chat-row" onclick="openChat('${c.convoId}','${escapeAttr(c.title)}','${c.type}')">
+      <div class="${avatarClass}">${initial}</div>
+      <div class="chat-meta">
+        <div class="name">${escapeHtml(c.title)}</div>
+        <div class="preview">${escapeHtml(c.lastMessage || "Belum ada pesan")}</div>
+      </div>
+    </div>`;
+  }).join("");
+}
+
+function escapeHtml(s){ return (s||"").replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+function escapeAttr(s){ return escapeHtml(s).replace(/'/g, "\\'"); }
+
+// ---------- Chat window ----------
+function openChat(convoId, title, type){
+  currentConvoId = convoId;
+  el("chatWindowName").textContent = title;
+  el("chatWindowSub").textContent = type === "group" ? "Grup" : "Chat pribadi";
+  showScreen("chatWindowScreen");
+  loadMessages();
+  clearInterval(pollTimer);
+  pollTimer = setInterval(loadMessages, 3000);
+}
+
+function closeChatWindow(){
+  clearInterval(pollTimer);
+  currentConvoId = null;
+  showScreen("chatListScreen");
+  loadConversations();
+}
+
+async function loadMessages(){
+  if (!currentConvoId) return;
+  try {
+    const r = await api("getMessages", { id: session.id, convoId: currentConvoId });
+    renderMessages(r.messages);
+  } catch(e) { console.error(e); }
+}
+
+function renderMediaBlock(m){
+  if (!m.mediaUrl) return "";
+  const type = m.mediaType || "";
+  if (type.startsWith("image/")) {
+    return `<a href="${m.mediaUrl}" target="_blank"><img src="${m.mediaUrl}" style="max-width:100%; border-radius:10px; display:block; margin-bottom:${m.text ? '6px' : '0'};" /></a>`;
+  }
+  if (type.startsWith("video/")) {
+    return `<video src="${m.mediaUrl}" controls style="max-width:100%; border-radius:10px; display:block; margin-bottom:${m.text ? '6px' : '0'};"></video>`;
+  }
+  // dokumen lain (pdf, word, dll)
+  return `<a href="${m.mediaUrl}" target="_blank" style="display:flex; align-items:center; gap:8px; background:#F4EDE5; border-radius:10px; padding:9px 11px; text-decoration:none; color:var(--ink); margin-bottom:${m.text ? '6px' : '0'};">
+    <span style="font-size:20px;">📄</span>
+    <span style="font-size:13px; word-break:break-all;">${escapeHtml(m.fileName || "Dokumen")}</span>
+  </a>`;
+}
+
+function renderMessages(messages){
+  const wrap = el("messagesWrap");
+  const wasAtBottom = wrap.scrollTop + wrap.clientHeight >= wrap.scrollHeight - 40;
+  wrap.innerHTML = messages.map(m => {
+    const out = m.from === session.id;
+    const time = new Date(m.timestamp).toLocaleTimeString("id-ID", {hour:"2-digit", minute:"2-digit"});
+    return `<div class="bubble ${out ? 'out' : 'in'}">
+      ${!out ? `<div class="sender">${escapeHtml(m.fromName)}</div>` : ""}
+      ${renderMediaBlock(m)}
+      ${m.text ? escapeHtml(m.text) : ""}
+      <div class="time">${time}</div>
+    </div>`;
+  }).join("");
+  if (wasAtBottom || messages.length <= 1) wrap.scrollTop = wrap.scrollHeight;
+}
+
+async function onFileSelected(event){
+  const file = event.target.files[0];
+  event.target.value = ""; // reset biar bisa pilih file yang sama lagi nanti
+  if (!file || !currentConvoId) return;
+
+  const sizeMB = file.size / (1024 * 1024);
+  if (sizeMB > MAX_FILE_MB) {
+    alert(`File terlalu besar (maks ${MAX_FILE_MB} MB). Ukuran file ini: ${sizeMB.toFixed(1)} MB`);
+    return;
+  }
+
+  const statusEl = el("uploadStatus");
+  statusEl.style.display = "block";
+  statusEl.textContent = "Mengunggah " + file.name + "...";
+
+  try {
+    const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+    const path = `${session.id}/${Date.now()}_${safeName}`;
+
+    const { error: uploadErr } = await sb.storage.from("chat-media").upload(path, file, {
+      contentType: file.type || "application/octet-stream",
+      upsert: false,
+    });
+    if (uploadErr) throw uploadErr;
+
+    const { data: publicUrlData } = sb.storage.from("chat-media").getPublicUrl(path);
+    const mediaUrl = publicUrlData.publicUrl;
+
+    const caption = el("messageInput").value.trim();
+    el("messageInput").value = "";
+
+    await api("sendMessage", {
+      id: session.id, convoId: currentConvoId, text: caption,
+      mediaUrl, mediaType: file.type || "application/octet-stream", fileName: file.name,
+    });
+
+    statusEl.style.display = "none";
+    loadMessages();
+  } catch(e) {
+    statusEl.style.display = "none";
+    alert("Gagal mengunggah file: " + (e.message || e));
+  }
+}
+
+async function sendMessageNow(){
+  const input = el("messageInput");
+  const text = input.value.trim();
+  if (!text || !currentConvoId) return;
+  input.value = "";
+  try {
+    await api("sendMessage", { id: session.id, convoId: currentConvoId, text });
+    loadMessages();
+  } catch(e) { alert(e.message); }
+}
+
+// ---------- New chat modal ----------
+function openNewChatModal(){
+  el("modalOverlay").classList.add("show");
+  setModalTab("private");
+}
+function closeModal(){ el("modalOverlay").classList.remove("show"); }
+
+function setModalTab(tab){
+  el("modalPrivate").style.display = tab === "private" ? "block" : "none";
+  el("modalGroup").style.display = tab === "group" ? "block" : "none";
+  el("modalBroadcast").style.display = tab === "broadcast" ? "block" : "none";
+  ["Private","Group","Broadcast"].forEach(t => {
+    el("tabBtn"+t).style.background = (t.toLowerCase() === tab) ? "var(--orange)" : "#fff";
+    el("tabBtn"+t).style.color = (t.toLowerCase() === tab) ? "#fff" : "var(--ink)";
+  });
+}
+
+async function startPrivate(){
+  const targetId = el("targetIdInput").value.trim();
+  el("privateError").textContent = "";
+  if (!targetId) { el("privateError").textContent = "Isi nomor HP teman"; return; }
+  try {
+    const r = await api("startPrivateChat", { id: session.id, targetId });
+    closeModal();
+    openChat(r.convoId, r.otherName, "private");
+  } catch(e) { el("privateError").textContent = e.message; }
+}
+
+async function createGroupNow(){
+  const groupName = el("newGroupName").value.trim();
+  el("groupError").textContent = "";
+  if (!groupName) { el("groupError").textContent = "Isi nama grup"; return; }
+  try {
+    const r = await api("createGroup", { id: session.id, groupName });
+    el("groupCodeDisplay").style.display = "block";
+    el("groupCodeDisplay").textContent = "Grup dibuat! Bagikan kode ini agar anggota lain bisa gabung: " + r.groupId;
+  } catch(e) { el("groupError").textContent = e.message; }
+}
+
+async function joinGroupNow(){
+  const groupId = el("joinGroupCode").value.trim();
+  el("groupError").textContent = "";
+  if (!groupId) { el("groupError").textContent = "Isi kode grup"; return; }
+  try {
+    const r = await api("joinGroup", { id: session.id, groupId });
+    closeModal();
+    openChat(r.groupId, r.name, "group");
+  } catch(e) { el("groupError").textContent = e.message; }
+}
+
+async function sendBroadcast(){
+  const adminPassword = el("adminPass").value;
+  const text = el("broadcastText").value.trim();
+  el("broadcastError").textContent = "";
+  if (!adminPassword || !text) { el("broadcastError").textContent = "Lengkapi kata sandi admin dan isi pengumuman"; return; }
+  try {
+    await api("broadcast", { adminPassword, text });
+    el("broadcastError").style.color = "green";
+    el("broadcastError").textContent = "Pengumuman terkirim!";
+    el("broadcastText").value = "";
+    setTimeout(closeModal, 900);
+  } catch(e) { el("broadcastError").style.color = ""; el("broadcastError").textContent = e.message; }
+}
+</script>
+</body>
+</html>
